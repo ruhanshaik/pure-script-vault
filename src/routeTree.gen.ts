@@ -9,56 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SuppliersRouteImport } from './routes/suppliers'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as PatientsRouteImport } from './routes/patients'
-import { Route as InventoryRouteImport } from './routes/inventory'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as BillingRouteImport } from './routes/billing'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AccountingRouteImport } from './routes/accounting'
 import { Route as IndexRouteImport } from './routes/index'
 
-const SuppliersRoute = SuppliersRouteImport.update({
-  id: '/suppliers',
-  path: '/suppliers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PatientsRoute = PatientsRouteImport.update({
-  id: '/patients',
-  path: '/patients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InventoryRoute = InventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingRoute = BillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountingRoute = AccountingRouteImport.update({
-  id: '/accounting',
-  path: '/accounting',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -67,144 +19,28 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/accounting': typeof AccountingRoute
-  '/admin': typeof AdminRoute
-  '/billing': typeof BillingRoute
-  '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
-  '/patients': typeof PatientsRoute
-  '/reports': typeof ReportsRoute
-  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/accounting': typeof AccountingRoute
-  '/admin': typeof AdminRoute
-  '/billing': typeof BillingRoute
-  '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
-  '/patients': typeof PatientsRoute
-  '/reports': typeof ReportsRoute
-  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/accounting': typeof AccountingRoute
-  '/admin': typeof AdminRoute
-  '/billing': typeof BillingRoute
-  '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
-  '/patients': typeof PatientsRoute
-  '/reports': typeof ReportsRoute
-  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/accounting'
-    | '/admin'
-    | '/billing'
-    | '/dashboard'
-    | '/inventory'
-    | '/patients'
-    | '/reports'
-    | '/suppliers'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/accounting'
-    | '/admin'
-    | '/billing'
-    | '/dashboard'
-    | '/inventory'
-    | '/patients'
-    | '/reports'
-    | '/suppliers'
-  id:
-    | '__root__'
-    | '/'
-    | '/accounting'
-    | '/admin'
-    | '/billing'
-    | '/dashboard'
-    | '/inventory'
-    | '/patients'
-    | '/reports'
-    | '/suppliers'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountingRoute: typeof AccountingRoute
-  AdminRoute: typeof AdminRoute
-  BillingRoute: typeof BillingRoute
-  DashboardRoute: typeof DashboardRoute
-  InventoryRoute: typeof InventoryRoute
-  PatientsRoute: typeof PatientsRoute
-  ReportsRoute: typeof ReportsRoute
-  SuppliersRoute: typeof SuppliersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/suppliers': {
-      id: '/suppliers'
-      path: '/suppliers'
-      fullPath: '/suppliers'
-      preLoaderRoute: typeof SuppliersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/patients': {
-      id: '/patients'
-      path: '/patients'
-      fullPath: '/patients'
-      preLoaderRoute: typeof PatientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inventory': {
-      id: '/inventory'
-      path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof InventoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing': {
-      id: '/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof BillingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accounting': {
-      id: '/accounting'
-      path: '/accounting'
-      fullPath: '/accounting'
-      preLoaderRoute: typeof AccountingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -217,14 +53,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountingRoute: AccountingRoute,
-  AdminRoute: AdminRoute,
-  BillingRoute: BillingRoute,
-  DashboardRoute: DashboardRoute,
-  InventoryRoute: InventoryRoute,
-  PatientsRoute: PatientsRoute,
-  ReportsRoute: ReportsRoute,
-  SuppliersRoute: SuppliersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
