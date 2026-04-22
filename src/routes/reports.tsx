@@ -1,32 +1,28 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { LoginPage } from '../components/LoginPage';
 import { AppLayout } from '../components/AppLayout';
-import { DashboardPage } from '../components/DashboardPage';
+import { ReportsPage } from '../components/ReportsPage';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30000 } } });
 
-export const Route = createFileRoute('/')({
-  component: RootIndex,
+export const Route = createFileRoute('/reports')({
+  component: ReportsRoute,
 });
 
-function RootIndex() {
+function ReportsRoute() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AuthGate />
+        <Gate />
       </AuthProvider>
     </QueryClientProvider>
   );
 }
 
-function AuthGate() {
+function Gate() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <LoginPage />;
-  return (
-    <AppLayout>
-      <DashboardPage />
-    </AppLayout>
-  );
+  return <AppLayout><ReportsPage /></AppLayout>;
 }

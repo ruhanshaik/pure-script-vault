@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { LoginPage } from '../components/LoginPage';
@@ -7,26 +7,22 @@ import { DashboardPage } from '../components/DashboardPage';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30000 } } });
 
-export const Route = createFileRoute('/')({
-  component: RootIndex,
+export const Route = createFileRoute('/dashboard')({
+  component: DashboardRoute,
 });
 
-function RootIndex() {
+function DashboardRoute() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AuthGate />
+        <DashboardGate />
       </AuthProvider>
     </QueryClientProvider>
   );
 }
 
-function AuthGate() {
+function DashboardGate() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <LoginPage />;
-  return (
-    <AppLayout>
-      <DashboardPage />
-    </AppLayout>
-  );
+  return <AppLayout><DashboardPage /></AppLayout>;
 }
