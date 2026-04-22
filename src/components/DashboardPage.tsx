@@ -94,7 +94,7 @@ export function DashboardPage() {
           <h3 className="text-sm font-semibold text-foreground mb-4">Category Sales</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={categorySalesData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+              <Pie data={categorySalesData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, percent }: { name: string; percent?: number }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {categorySalesData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Pie>
               <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }} />
