@@ -1,20 +1,11 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, flexRender, createColumnHelper, type SortingState } from '@tanstack/react-table';
+import { useState, useEffect, useMemo } from 'react';
 import { getMedicines, addMedicine } from '../services/api';
 import type { Medicine } from '../types';
 import { SkeletonTable, EmptyState } from './Skeleton';
 import { IconPlus, IconSearch, IconFilter, IconArrowUp, IconArrowDown } from './icons';
 
-const columnHelper = createColumnHelper<Medicine>();
-
-function AddMedicineModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: addMedicine,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['medicines'] }); onClose(); },
-  });
-
+function AddMedicineModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: '', genericName: '', manufacturer: '', category: 'Tablet' as Medicine['category'],
     salt: '', batchNumber: '', expiryDate: '', mrp: '', purchasePrice: '',
@@ -22,8 +13,9 @@ function AddMedicineModal({ open, onClose }: { open: boolean; onClose: () => voi
     binLocation: '', scheduleType: 'OTC' as Medicine['scheduleType'], gstRate: '12',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const med: Medicine = {
       id: `m_${Date.now()}`, ...form,
       mrp: Number(form.mrp), purchasePrice: Number(form.purchasePrice),
@@ -31,16 +23,19 @@ function AddMedicineModal({ open, onClose }: { open: boolean; onClose: () => voi
       unitsPerPack: Number(form.unitsPerPack), gstRate: Number(form.gstRate),
       isActive: true, createdAt: new Date().toISOString().split('T')[0],
     };
-    mutation.mutate(med);
+    await addMedicine(med);
+    setSaving(false);
+    onSaved();
+    onClose();
   };
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-bold text-foreground mb-6">Add New Medicine</h2>
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-bold text-foreground mb-4 sm:mb-6">Add New Medicine</h2>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {([
             ['name', 'Medicine Name'], ['genericName', 'Generic Name'], ['manufacturer', 'Manufacturer'],
             ['salt', 'Salt/Composition'], ['batchNumber', 'Batch Number'], ['binLocation', 'Bin/Rack Location'],
@@ -74,11 +69,9 @@ function AddMedicineModal({ open, onClose }: { open: boolean; onClose: () => voi
               {['OTC', 'H', 'H1', 'X', 'Narcotic'].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
-          <div className="col-span-2 flex justify-end gap-3 mt-4">
+          <div className="col-span-1 sm:col-span-2 flex justify-end gap-3 mt-4">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Adding...' : 'Add Medicine'}
-            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Adding...' : 'Add Medicine'}</button>
           </div>
         </form>
       </div>
@@ -87,154 +80,127 @@ function AddMedicineModal({ open, onClose }: { open: boolean; onClose: () => voi
 }
 
 export function InventoryPage() {
-  const { data: medicines = [], isLoading } = useQuery({ queryKey: ['medicines'], queryFn: getMedicines });
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sortKey, setSortKey] = useState<keyof Medicine | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [modalOpen, setModalOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+
+  const loadData = () => {
+    getMedicines().then(m => { setMedicines(m); setIsLoading(false); });
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const filtered = useMemo(() => {
     let data = medicines;
     if (filterCategory) data = data.filter(m => m.category === filterCategory);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      data = data.filter(m => m.name.toLowerCase().includes(q) || m.salt.toLowerCase().includes(q) || m.manufacturer.toLowerCase().includes(q));
+    }
+    if (sortKey) {
+      data = [...data].sort((a, b) => {
+        const av = a[sortKey], bv = b[sortKey];
+        const cmp = typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv));
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
     return data;
-  }, [medicines, filterCategory]);
+  }, [medicines, filterCategory, search, sortKey, sortDir]);
 
-  const columns = useMemo(() => [
-    columnHelper.accessor('name', {
-      header: 'Medicine',
-      cell: info => (
-        <div>
-          <p className="font-medium text-foreground">{info.getValue()}</p>
-          <p className="text-xs text-muted-foreground">{info.row.original.salt}</p>
-        </div>
-      ),
-    }),
-    columnHelper.accessor('category', { header: 'Category', cell: info => <span className="badge badge-info">{info.getValue()}</span> }),
-    columnHelper.accessor('batchNumber', { header: 'Batch' }),
-    columnHelper.accessor('quantity', {
-      header: 'Stock',
-      cell: info => {
-        const q = info.getValue();
-        const min = info.row.original.minStock;
-        return <span className={q <= min ? 'font-semibold text-destructive' : 'text-foreground'}>{q} {info.row.original.unit}s</span>;
-      },
-    }),
-    columnHelper.accessor('mrp', { header: 'MRP', cell: info => `Rs. ${info.getValue()}` }),
-    columnHelper.accessor('expiryDate', {
-      header: 'Expiry',
-      cell: info => {
-        const d = new Date(info.getValue());
-        const days = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        return (
-          <span className={days <= 30 ? 'text-destructive font-medium' : days <= 90 ? 'text-warning' : 'text-muted-foreground'}>
-            {d.toLocaleDateString()}
-          </span>
-        );
-      },
-    }),
-    columnHelper.accessor('binLocation', { header: 'Location' }),
-    columnHelper.accessor('manufacturer', { header: 'Mfg' }),
-  ], []);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageData = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
-  const table = useReactTable({
-    data: filtered,
-    columns,
-    state: { sorting, globalFilter: search },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setSearch,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
-  });
+  const toggleSort = (key: keyof Medicine) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+
+  const SortIcon = ({ col }: { col: keyof Medicine }) => {
+    if (sortKey !== col) return null;
+    return sortDir === 'asc' ? <IconArrowUp className="h-3 w-3 inline ml-1" /> : <IconArrowDown className="h-3 w-3 inline ml-1" />;
+  };
 
   if (isLoading) return <div className="space-y-4"><div className="skeleton h-10 w-64" /><SkeletonTable rows={8} /></div>;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Inventory Management</h1>
-          <p className="text-sm text-muted-foreground">{medicines.length} medicines in stock</p>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">Inventory Management</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">{medicines.length} medicines in stock</p>
         </div>
-        <button onClick={() => setModalOpen(true)} className="btn-primary">
+        <button onClick={() => setModalOpen(true)} className="btn-primary self-start sm:self-auto">
           <IconPlus className="h-4 w-4" /> Add Medicine
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative flex-1 w-full sm:max-w-sm">
           <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            placeholder="Search by name, salt, manufacturer..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="input-field !pl-10"
-          />
+          <input placeholder="Search by name, salt, manufacturer..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} className="input-field !pl-10" />
         </div>
         <div className="flex items-center gap-2">
           <IconFilter className="h-4 w-4 text-muted-foreground" />
-          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="input-field !w-auto">
+          <select value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setPage(0); }} className="input-field !w-auto">
             <option value="">All Categories</option>
             {['Tablet', 'Syrup', 'Injection', 'Capsule', 'Cream', 'Drops', 'Powder', 'Inhaler'].map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
-              {table.getHeaderGroups().map(hg => (
-                <tr key={hg.id} className="border-b border-border bg-muted/40">
-                  {hg.headers.map(h => (
-                    <th
-                      key={h.id}
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground cursor-pointer select-none"
-                      onClick={h.column.getToggleSortingHandler()}
-                    >
-                      <div className="flex items-center gap-1">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                        {h.column.getIsSorted() === 'asc' && <IconArrowUp className="h-3 w-3" />}
-                        {h.column.getIsSorted() === 'desc' && <IconArrowDown className="h-3 w-3" />}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              ))}
+              <tr className="border-b border-border bg-muted/40">
+                {([
+                  ['name', 'Medicine'], ['category', 'Category'], ['batchNumber', 'Batch'],
+                  ['quantity', 'Stock'], ['mrp', 'MRP'], ['expiryDate', 'Expiry'],
+                  ['binLocation', 'Location'], ['manufacturer', 'Mfg'],
+                ] as [keyof Medicine, string][]).map(([key, label]) => (
+                  <th key={key} className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-foreground cursor-pointer select-none" onClick={() => toggleSort(key)}>
+                    {label}<SortIcon col={key} />
+                  </th>
+                ))}
+              </tr>
             </thead>
             <tbody>
-              {table.getRowModel().rows.length === 0 ? (
-                <tr><td colSpan={columns.length}><EmptyState message="No medicines found" /></td></tr>
-              ) : table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="border-b border-border last:border-0 table-row-hover">
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-4 py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {pageData.length === 0 ? (
+                <tr><td colSpan={8}><EmptyState message="No medicines found" /></td></tr>
+              ) : pageData.map(m => {
+                const daysToExpiry = Math.ceil((new Date(m.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                return (
+                  <tr key={m.id} className="border-b border-border last:border-0 table-row-hover">
+                    <td className="px-3 sm:px-4 py-3"><p className="font-medium text-foreground">{m.name}</p><p className="text-xs text-muted-foreground">{m.salt}</p></td>
+                    <td className="px-3 sm:px-4 py-3"><span className="badge badge-info">{m.category}</span></td>
+                    <td className="px-3 sm:px-4 py-3 text-muted-foreground">{m.batchNumber}</td>
+                    <td className="px-3 sm:px-4 py-3"><span className={m.quantity <= m.minStock ? 'font-semibold text-destructive' : 'text-foreground'}>{m.quantity} {m.unit}s</span></td>
+                    <td className="px-3 sm:px-4 py-3">Rs. {m.mrp}</td>
+                    <td className="px-3 sm:px-4 py-3"><span className={daysToExpiry <= 30 ? 'text-destructive font-medium' : daysToExpiry <= 90 ? 'text-warning' : 'text-muted-foreground'}>{new Date(m.expiryDate).toLocaleDateString()}</span></td>
+                    <td className="px-3 sm:px-4 py-3 text-muted-foreground">{m.binLocation}</td>
+                    <td className="px-3 sm:px-4 py-3 text-muted-foreground">{m.manufacturer}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </p>
+          <p className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</p>
           <div className="flex gap-2">
-            <button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="btn-secondary !py-1 !px-3 !text-xs disabled:opacity-40">Previous</button>
-            <button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="btn-secondary !py-1 !px-3 !text-xs disabled:opacity-40">Next</button>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="btn-secondary !py-1 !px-3 !text-xs disabled:opacity-40">Previous</button>
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="btn-secondary !py-1 !px-3 !text-xs disabled:opacity-40">Next</button>
           </div>
         </div>
       </div>
 
-      <AddMedicineModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <AddMedicineModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={loadData} />
     </div>
   );
 }
